@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Unlicense OR CC0-1.0
+ */
 /* Console example — declarations of command registration functions.
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
@@ -12,8 +17,11 @@
 extern "C" {
 #endif
 
-// Register NVS functions
-void register_nvs(void);
+// Register WiFi functions
+void register_wifi(void);
+
+// tbk api
+void initialize_wifi(void);
 
 #ifdef __cplusplus
 }

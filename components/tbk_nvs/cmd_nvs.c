@@ -18,7 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "esp_err.h"
-#include "cmd_nvs.h"
+#include "tbk_nvs.h"
 #include "nvs.h"
 
 typedef struct {
@@ -159,7 +159,6 @@ static void print_blob(const char *blob, size_t len)
     }
     printf("\n");
 }
-
 
 static esp_err_t set_value_in_nvs(const char *key, const char *str_type, const char *str_value)
 {

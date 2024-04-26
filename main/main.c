@@ -1,6 +1,5 @@
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include <esp_log.h>
-#include <esp_err.h>
 
 #include <esp_system.h>
 #include <esp_console.h>
@@ -10,12 +9,9 @@
 
 #include <linenoise/linenoise.h>
 
-#include <nvs.h>
-#include <nvs_flash.h>
-
 #include "cmd_system.h"
-#include "cmd_wifi.h"
-#include "cmd_nvs.h"
+#include "tbk_wifi.h"
+#include "tbk_nvs.h"
 
 
 static const char *TAG = "<Main>";
@@ -45,15 +41,6 @@ static void initialize_filesystem(void)
 }
 #endif // CONFIG_STORE_HISTORY
 
-static void initialize_nvs(void){
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK( nvs_flash_erase() );
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
-}
-
 #define PROMPT_STR "tbk"
 
 void app_main(void){
@@ -76,6 +63,7 @@ void app_main(void){
 #else
     ESP_LOGD(TAG, "Command history disabled");
 #endif
+    initialize_wifi();
 
     esp_console_register_help_command();
     register_system_common();

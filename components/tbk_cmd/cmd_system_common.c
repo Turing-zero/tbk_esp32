@@ -23,7 +23,7 @@
 #include "argtable3/argtable3.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "cmd_system.h"
+#include "tbk_cmd.h"
 #include "sdkconfig.h"
 
 #ifdef CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS

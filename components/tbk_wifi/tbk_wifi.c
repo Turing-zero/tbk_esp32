@@ -26,13 +26,17 @@
 #include "tbk_wifi.h"
 
 #define JOIN_TIMEOUT_MS (10000)
-
+static bool wifi_need_connect = true;
 static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data){
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    ESP_LOGD(__func__, "Event dispatched");
+    ESP_LOGD(__func__, "Event base: %s", event_base);
+    ESP_LOGD(__func__, "Event ID: %ld", event_id);
+
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED && wifi_need_connect) {
         esp_wifi_connect();
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
@@ -102,7 +106,6 @@ static bool read_wifi_credentials(char *ssid, char *pass){
 static bool wifi_join(const char *ssid, const char *pass, int timeout_ms);
 
 void initialize_wifi(void){
-    esp_log_level_set("wifi", ESP_LOG_WARN);
     static bool initialized = false;
     if (initialized) {
         return;
@@ -135,6 +138,8 @@ void initialize_wifi(void){
 static bool wifi_join(const char *ssid, const char *pass, int timeout_ms){
     initialize_wifi();
 
+    wifi_need_connect = true;
+
     ESP_LOGI(__func__, "Connecting to '%s'", ssid);
 
     wifi_config_t wifi_config = { 0 };
@@ -153,6 +158,7 @@ static bool wifi_join(const char *ssid, const char *pass, int timeout_ms){
 
     if (!connected) {
         ESP_LOGW(__func__, "Connection timed out [%s](%s)", ssid, pass);
+        wifi_need_connect = false;
     }else{
         ESP_LOGI(__func__, "Connected to '%s'", ssid);
     }
@@ -189,19 +195,74 @@ static int connect(int argc, char **argv){
     return 0;
 }
 
+static int disconnect(int argc, char **argv){
+    wifi_need_connect = false;
+    esp_err_t err = esp_wifi_disconnect();
+    if (err == ESP_OK) {
+        ESP_LOGI(__func__, "Disconnected");
+    } else {
+        ESP_LOGE(__func__, "Failed to disconnect (%s)", esp_err_to_name(err));
+        return 1;
+    }
+    return 0;
+}
+
+static int status(int argc, char **argv){
+    wifi_ap_record_t ap_info;
+    esp_err_t err = esp_wifi_sta_get_ap_info(&ap_info);
+    if (err == ESP_OK) {
+        ESP_LOGI(__func__, "Connected to '%s'", (char *) ap_info.ssid);
+    } else if (err == ESP_ERR_WIFI_NOT_CONNECT) {
+        ESP_LOGI(__func__, "Not connected");
+    } else if (err == ESP_ERR_WIFI_CONN){
+        ESP_LOGI(__func__, "Connection error");
+    } else {
+        ESP_LOGE(__func__, "Failed to get AP info (%s)", esp_err_to_name(err));
+        return 1;
+    }
+    return 0;
+}
+
+static char HELP[] = "wifi [connect|disconnect|status]\n"
+                    "\twifi connect <ssid> [pass] [timeout]\n"
+                    "\t\tConnect to an WiFi AP\n"
+                    "\twifi disconnect\n"
+                    "\t\tDisconnect from the current WiFi AP\n"
+                    "\twifi status\n"
+                    "\t\tShow WiFi connection status";
+
+int wifi_entrance(int argc, char **argv){
+    if (argc <= 1 || strcmp(argv[1], "help") == 0) {
+        printf("%s\n", HELP);
+        return 0;
+    }
+    if(strcmp(argv[1], "connect") == 0){
+        return connect(argc - 1, argv + 1);
+    }else if (strcmp(argv[1], "disconnect") == 0) {
+        return disconnect(argc - 1, argv + 1);
+    }else if(strcmp(argv[1], "status") == 0){
+        return status(argc - 1, argv + 1);
+    }else{
+        ESP_LOGE(__func__, "Unknown command");
+        printf("%s\n", HELP);
+        return 1;
+    }
+    return 0;
+}
+
 void register_wifi(void){
     join_args.timeout = arg_int0(NULL, "timeout", "<t>", "Connection timeout, ms");
     join_args.ssid = arg_str1(NULL, NULL, "<ssid>", "SSID of AP");
     join_args.password = arg_str0(NULL, NULL, "<pass>", "PSK of AP");
     join_args.end = arg_end(2);
 
-    const esp_console_cmd_t join_cmd = {
-        .command = "join",
-        .help = "Join WiFi AP as a station",
+    const esp_console_cmd_t wifi_cmd = {
+        .command = "wifi",
+        .help = "WiFi commands",
         .hint = NULL,
-        .func = &connect,
-        .argtable = &join_args
+        .func = &wifi_entrance,
+        .argtable = NULL
     };
 
-    ESP_ERROR_CHECK( esp_console_cmd_register(&join_cmd) );
+    ESP_ERROR_CHECK( esp_console_cmd_register(&wifi_cmd) );
 }

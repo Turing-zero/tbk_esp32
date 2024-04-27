@@ -1,0 +1,9 @@
+// A very simple protocol definition, consisting of only
+// one message.
+
+syntax = "proto2";
+
+message TestMsg {
+    required int32 id = 1;
+    required string str = 2;
+}

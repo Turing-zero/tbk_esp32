@@ -24,7 +24,7 @@
 #include "driver/rtc_io.h"
 #include "driver/uart.h"
 #include "argtable3/argtable3.h"
-#include "cmd_system.h"
+#include "tbk_cmd.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "cmd_system_sleep";
